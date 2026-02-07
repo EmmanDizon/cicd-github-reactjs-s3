@@ -2,7 +2,7 @@ name: Deploy - Dev (after merge)
 
 on:
   push:
-    branches: ["dev"]
+    branches: ["develop"]
 
 permissions:
   id-token: write
