@@ -1,0 +1,41 @@
+name: Deploy Vite (Dev)
+
+on:
+  pull_request:
+    branches: ["develop"]
+    types: [closed]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    # RUN ONLY IF PR WAS MERGED (not just closed)
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.DEV_AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Upload to S3
+        run: aws s3 sync dist s3://${{ vars.DEV_S3_BUCKET }} --delete
