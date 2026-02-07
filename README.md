@@ -1,6 +1,8 @@
 # CI/CD Setup Guide: React + GitHub Actions + AWS S3
 
-## This step is for those who already have AWS organization (dev, staging and so on). If you don't have yet, set it up first. Check out my repo `aws-organization-instruction`
+## This documentation teaches you how to automatically deploy your react app to s3 via github actions
+
+### This step is for those who already have AWS organization (dev, staging and so on). If you don't have yet, set it up first. Check out my repo `aws-organization-instruction`
 
 ## 1. Access & Authentication (NO ROOT USAGE)
 
