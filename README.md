@@ -1,8 +1,12 @@
-# CI/CD Setup Guide: React + GitHub Actions + AWS S3
+## CI/CD Setup Guide: React + GitHub Actions + AWS S3
 
-## This documentation teaches you how to automatically deploy your react app to s3 via github actions
+This documentation teaches you how to automatically deploy your react app to s3 via github actions.
 
-### This step is for those who already have AWS organization (dev, staging and so on). If you don't have yet, set it up first. Check out my repo `aws-organization-instruction`
+### Prerequisites
+
+This step is for those who already have AWS organization (dev, staging and so on). If you don't have yet, set it up first. Check out my repo `aws-organization-instruction`
+
+---
 
 ## 1. Access & Authentication (NO ROOT USAGE)
 
@@ -168,12 +172,100 @@ Create workflow files such as:
 - `ci-pr.yml` (for pull request checks)
 - `deploy-dev.yml` (deploy on merge to develop)
 
-The deploy workflow should:
+#### **ci-pr.yml** - Pull Request Checks
 
-1. Run on push to `develop`
-2. Use OIDC to assume the AWS role
-3. Build the React app
-4. Sync build output to S3
+Create `.github/workflows/ci-pr.yml`:
+
+```yaml
+# PURPOSE: This workflow runs AUTOMATICALLY when you create a Pull Request.
+# It checks if your code is valid BEFORE merging into develop branch.
+# This prevents broken code from being deployed.
+
+name: CI - Pull Request
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: Build application
+        run: npm run build
+```
+
+#### **deploy-dev.yml** - Deploy to S3
+
+Create `.github/workflows/deploy-dev.yml`:
+
+```yaml
+# PURPOSE: This workflow runs AUTOMATICALLY after you merge/push to develop branch.
+# It builds your React app and deploys it to AWS S3.
+# This is SEPARATE from ci-pr.yml (which only checks code quality).
+
+name: Deploy to DEV
+
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.DEV_AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy to S3
+        run: |
+          aws s3 sync dist/ s3://${{ vars.DEV_S3_BUCKET }} --delete
+
+      - name: Deployment complete
+        run: |
+          echo "✅ Deployed to: http://${{ vars.DEV_S3_BUCKET }}.s3-website-${{ vars.AWS_REGION }}.amazonaws.com"
+```
 
 ### 3.3 GitHub Actions Variables
 
