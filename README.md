@@ -269,7 +269,7 @@ jobs:
 
 ### 3.3 GitHub Actions Variables
 
-Navigate to: **GitHub repo → Settings → Secrets and variables → Actions → Variables**
+Navigate to: **GitHub repo → Settings → Secrets and variables → Actions → Variables → Repository variables**
 
 Add the following variables:
 
