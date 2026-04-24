@@ -79,37 +79,40 @@ https://<directory-id>.awsapps.com/start
 ### 2.3 Configure Trust Policy (CRITICAL)
 
 Edit **Trust relationships** of role `your-role-name`.
-```
+
+```json
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": {
-                "Federated": "arn:aws:iam::YOUR_ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
-            },
-            "Action": "sts:AssumeRoleWithWebIdentity",
-            "Condition": {
-                "StringEquals": {
-                    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-                },
-                "StringLike": {
-                    "token.actions.githubusercontent.com:sub": "repo:GITHUB_USERNAME/GITHUB_REPOSITORY:*"
-                }
-            }
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::YOUR_ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:GITHUB_USERNAME/GITHUB_REPOSITORY:*"
         }
-    ]
+      }
+    }
+  ]
 }
 ```
 
 The `sub` must match your GitHub repo.
 
 **Format:**
+
 ```
 repo:<GITHUB_USERNAME>/<GITHUB_REPOSITORY>:*
 ```
 
 **Example:**
+
 ```
 repo:EmmanDizon/cicd-github-reactjs-s3:*
 ```
@@ -120,23 +123,32 @@ This allows GitHub Actions from that repo to assume the role.
 
 ### 2.4 Attach Permissions Policy to Role
 
-Attach a policy that allows deploying to S3.
-```
+Go to **IAM → Roles → your-role-name → Permissions** tab.
+
+Click **Add permissions → Create inline policy** → **JSON** tab.
+
+Paste this IAM policy:
+
+```json
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "PublicRead",
-            "Effect": "Allow",
-            "Principal": "*",
-            "Action": "s3:GetObject",
-            "Resource": "arn:aws:s3:::REPO_NAME/*"
-        }
-    ]
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::YOUR_BUCKET_NAME", "arn:aws:s3:::YOUR_BUCKET_NAME/*"]
+    }
+  ]
 }
 ```
----
 
+**Policy name:** `S3-InventoryAppFE-DeployAccess`
+
+**Replace:** `YOUR_BUCKET_NAME` with your actual S3 bucket name.
+
+**Purpose:** This gives the GitHub Actions role permission to upload, read, delete, and list files in your S3 bucket.
+
+---
 
 ## 3. GitHub Repository Setup
 
@@ -169,16 +181,15 @@ Navigate to: **GitHub repo → Settings → Secrets and variables → Actions �
 
 Add the following variables:
 
-| Variable | Value |
-|----------|-------|
+| Variable           | Value                                           |
+| ------------------ | ----------------------------------------------- |
 | `DEV_AWS_ROLE_ARN` | `arn:aws:iam::<ACCOUNT_ID>:role/your-role-name` |
-| `AWS_REGION` | `us-east-1` |
-| `DEV_S3_BUCKET` | `react-deployment-bucket-test` |
+| `AWS_REGION`       | `us-east-1`                                     |
+| `DEV_S3_BUCKET`    | `react-deployment-bucket-test`                  |
 
 **Note:** No AWS keys should exist in GitHub.
 
 ---
-
 
 ## 4. S3 Setup for React Static Hosting
 
@@ -194,14 +205,32 @@ Add the following variables:
 2. Enable **Static website hosting**
 3. Configure:
    - **Index document:** `index.html`
-   - **Error document:** `index.html` *(Required for React routing)*
+   - **Error document:** `index.html` _(Required for React routing)_
 
 ### 4.3 Add Bucket Policy (Public Read)
 
-Allow public read access to objects.
+Go to **S3 → Your bucket → Permissions → Bucket policy**.
 
-- **Action:** `s3:GetObject`
-- **Resource:** `arn:aws:s3:::react-deployment-bucket-test/*`
+Click **Edit** and paste this bucket policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/*"
+    }
+  ]
+}
+```
+
+**Replace:** `YOUR_BUCKET_NAME` with your actual S3 bucket name.
+
+**Purpose:** This makes your React app files publicly accessible so users can view your website.
 
 ### 4.4 Public Access URL
 
